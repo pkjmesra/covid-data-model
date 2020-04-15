@@ -13,9 +13,9 @@ from datetime import datetime, timedelta
 from multiprocessing import Pool
 from pyseir.models import suppression_policies
 from pyseir import load_data, OUTPUT_DIR
-from pyseir.models.seir_model import SEIRModelAge
+from pyseir.models.seir_model_age import SEIRModelAge
 from libs.datasets.dataset_utils import AggregationLevel
-from pyseir.parameters.parameter_ensemble_generator import ParameterEnsembleGeneratorAge
+from pyseir.parameters.parameter_ensemble_generator_age import ParameterEnsembleGeneratorAge
 from pyseir.load_data import HospitalizationDataType
 
 
@@ -292,12 +292,15 @@ class ModelFitterAge:
 
         # Load up some number of initial exposed so the initial flow into infected is stable.
 
-        self.SEIR_kwargs['E_initial'] = self.steady_state_exposed_to_infected_ratio * 10 ** log10_I_initial
+        age_distribution = self.SEIR_kwargs['N'] / self.SEIR_kwargs['N'].sum()
+
+        self.SEIR_kwargs['E_initial'] = \
+            self.steady_state_exposed_to_infected_ratio * 10 ** log10_I_initial * age_distribution
 
         model = SEIRModelAge(
             R0=R0,
             suppression_policy=suppression_policy,
-            I_initial=10 ** log10_I_initial,
+            I_initial=10 ** log10_I_initial * age_distribution,
             **self.SEIR_kwargs)
         model.run()
         return model
