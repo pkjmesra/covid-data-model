@@ -637,6 +637,11 @@ def run_state(state, states_only=False, with_age_structure=False):
     with_age_structure: bool
         If True run model with age structure.
     """
+    if with_age_structure:
+        suffix = '_with_age_structure'
+    else:
+        suffix = ''
+
     state_obj = us.states.lookup(state)
     logging.info(f'Running MLE fitter for state {state_obj.name}')
     state_output_dir = os.path.join(OUTPUT_DIR, 'pyseir', 'data', 'state_summary')
