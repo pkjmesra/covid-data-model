@@ -8,14 +8,18 @@ set -o errexit
 cd "$(dirname "$0")"
 
 #update this data path
-PUBLIC_DATA_PATH="../covid-projections/public/data"
+#PUBLIC_DATA_PATH="../covid-projections/public/data"
+PUBLIC_DATA_PATH="../covid-data-public/data"
 if [ ! -d "${PUBLIC_DATA_PATH}" ] ; then
   echo "Directory ${PUBLIC_DATA_PATH} does not exist. Make sure you've cloned covid-projections next to covid-data-model."
   exit 1
 fi
 
 # Run State and County level models
-pyseir run-all --run-mode=can-before-hospitalization-new-params --output-dir="results/"
+#pyseir run-all --run-mode=can-before-hospitalization-new-params --output-dir="results/" --states_only
+echo "about to run pyseir"
+pyseir run-all --run-mode=can-inference-derived --output-dir="results/" --state="Delaware" 
+echo "ran pyseir"
 
 # Relocate output to the expected location.
 cp results/web_ui/county/* ${PUBLIC_DATA_PATH}/county/
