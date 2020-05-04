@@ -7,6 +7,7 @@ set -o errexit
 # Go to repo root.
 cd "$(dirname "$0")"
 
+#update this data path
 PUBLIC_DATA_PATH="../covid-projections/public/data"
 if [ ! -d "${PUBLIC_DATA_PATH}" ] ; then
   echo "Directory ${PUBLIC_DATA_PATH} does not exist. Make sure you've cloned covid-projections next to covid-data-model."
