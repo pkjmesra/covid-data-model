@@ -1,3 +1,4 @@
+import pdb
 import os
 import logging
 import pandas as pd
@@ -102,6 +103,7 @@ def cache_county_case_data():
     county_case_data = pd.read_csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv', dtype='str')
     county_case_data['date'] = pd.to_datetime(county_case_data['date'])
     county_case_data[['cases', 'deaths']] = county_case_data[['cases', 'deaths']].astype(int)
+    #county_case_data.loc[county_case_data['state'] == 'Puerto Rico', 'fips'] = 72 #do we need to cast this to an int? #NATASHA line needed
     county_case_data = county_case_data[county_case_data['fips'].notnull()]
     county_case_data.to_pickle(os.path.join(DATA_DIR, 'covid_case_timeseries.pkl'))
 
@@ -203,6 +205,7 @@ def load_county_metadata():
     """
 
     county_metadata = pd.read_json(os.path.join(DATA_DIR, 'county_metadata.json'), dtype={'fips': 'str'})
+    print(county_metadata)
     # Fix state names
     county_metadata.loc[:, 'state'] = county_metadata['fips'].apply(lambda x: us.states.lookup(x[:2]).name)
     return county_metadata
@@ -247,7 +250,7 @@ def load_county_metadata_by_state(state):
 
     for col in density_measures:
         state_metadata[col] /= state_metadata['total_population']
-
+    #pdb.set_trace()
     return state_metadata
 
 
@@ -368,7 +371,8 @@ def load_hospitalization_data(fips, t0, category='hospitalized'):
     hospitalization_data = get_hospitalization_data()\
         .get_subset(AggregationLevel.COUNTY, country='USA', fips=fips) \
         .get_data(country='USA', fips=fips)
-
+    print('this is the hospitalization data natasha')
+    print(hospitalization_data)
     if len(hospitalization_data) == 0:
         return None, None, None
 
@@ -420,6 +424,7 @@ def load_hospitalization_data_by_state(state, t0, convert_cumulative_to_current=
         Specifies cumulative or current hospitalizations.
     """
     abbr = us.states.lookup(state).abbr
+    print(abbr)
     hospitalization_data = (
         CovidTrackingDataSource.local().timeseries(fill_na=False)
         .get_subset(AggregationLevel.STATE, country='USA', state=abbr)
@@ -434,6 +439,7 @@ def load_hospitalization_data_by_state(state, t0, convert_cumulative_to_current=
         return None, None, None
 
     if (hospitalization_data[f'current_{category}'] > 0).any():
+        print('had at least one non-zero entry')
         hospitalization_data = hospitalization_data[hospitalization_data[f'current_{category}'].notnull()]
         times_new = (hospitalization_data['date'].dt.date - t0.date()).dt.days.values
         return times_new, \
@@ -499,6 +505,8 @@ def load_new_case_data_by_state(state, t0):
     """
     _state_case_data = load_state_case_data()
     state_case_data = _state_case_data[_state_case_data['state'] == us.states.lookup(state).abbr]
+    #state_case_data.drop(state_case_data.tail(1).index,inplace=True) #Natasha take this out LATER
+    print(state_case_data)
     times_new = (state_case_data['date'] - t0).dt.days.iloc[1:]
     observed_new_cases = state_case_data['cases'].values[1:] - state_case_data['cases'].values[:-1]
     observed_new_deaths = state_case_data['deaths'].values[1:] - state_case_data['deaths'].values[:-1]

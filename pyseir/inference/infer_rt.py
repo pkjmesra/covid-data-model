@@ -49,7 +49,7 @@ class RtInferenceEngine:
     """
     def __init__(self,
                  fips,
-                 window_size=14,
+                 window_size=13,
                  kernel_std=5,
                  r_list=np.linspace(0, 10, 501),
                  process_sigma=0.05,
@@ -57,7 +57,7 @@ class RtInferenceEngine:
                  confidence_intervals=(0.68, 0.95),
                  min_cases=5,
                  min_deaths=5):
-
+        print('now here in init')
         self.fips = fips
         self.r_list = r_list
         self.window_size = window_size
@@ -67,19 +67,22 @@ class RtInferenceEngine:
         self.confidence_intervals = confidence_intervals
         self.min_cases = min_cases
         self.min_deaths = min_deaths
+        print(fips)
 
         if len(fips) == 2:  # State FIPS are 2 digits
             self.agg_level = AggregationLevel.STATE
             self.state_obj = us.states.lookup(self.fips)
             self.state = self.state_obj.name
+            print(self.state_obj.abbr)
+            print('thats the abbreviation')
 
             self.times, self.observed_new_cases, self.observed_new_deaths = \
                 load_data.load_new_case_data_by_state(self.state, self.ref_date)
-
             self.hospital_times, self.hospitalizations, self.hospitalization_data_type = \
                 load_data.load_hospitalization_data_by_state(self.state_obj.abbr, t0=self.ref_date)
             self.display_name = self.state
         else:
+            print('not a state~~~~~~~~~~~~~~~~~~')
             self.agg_level = AggregationLevel.COUNTY
             self.geo_metadata = load_data.load_county_metadata().set_index('fips').loc[fips].to_dict()
             self.state = self.geo_metadata['state']
@@ -95,6 +98,11 @@ class RtInferenceEngine:
                 load_data.load_new_case_data_by_fips(self.fips, t0=self.ref_date)
             self.hospital_times, self.hospitalizations, self.hospitalization_data_type = \
                 load_data.load_hospitalization_data(self.fips, t0=self.ref_date)
+            print('county level')
+            print(self.hospital_times)
+            print(self.hospitalizations)
+            print(self.hospitalization_data_type)
+            print('made it here')
 
         logging.info(f'Running Rt Inference for {self.display_name}')
 
@@ -320,7 +328,8 @@ class RtInferenceEngine:
 
         return dates[start_idx:], times[start_idx:], posteriors
 
-    def infer_all(self, plot=False, shift_deaths=0):
+    def infer_all(self, plot=True, shift_deaths=0):
+        print('in infer all---------')
         """
         Infer R_t from all available data sources.
 
@@ -343,6 +352,7 @@ class RtInferenceEngine:
         cases = self.get_timeseries(TimeseriesType.NEW_CASES.value)[IDX_OF_COUNTS]
         deaths = self.get_timeseries(TimeseriesType.NEW_DEATHS.value)[IDX_OF_COUNTS]
         if self.hospitalization_data_type:
+            print('getting hospitalizations')
             hosps = self.get_timeseries(TimeseriesType.NEW_HOSPITALIZATIONS.value)[IDX_OF_COUNTS]
 
         if np.sum(cases) > self.min_cases:
@@ -428,7 +438,8 @@ class RtInferenceEngine:
                                  alpha=.4, color='darkseagreen')
                 plt.scatter(df_all.index, df_all['Rt_MAP__new_hospitalizations'],
                             alpha=1, s=25, color='darkseagreen', label='New Hospitalizations', marker='d')
-
+            if 'Rt_MAP_composite' in df_all:
+              plt.scatter(df_all.index, df_all['Rt_MAP_composite'], alpha = 1, s = 25, color = 'yellow', label = 'inferred rt', marker = 'd')
             plt.hlines([1.0], *plt.xlim(), alpha=1, color='g')
             plt.hlines([1.1], *plt.xlim(), alpha=1, color='gold')
             plt.hlines([1.3], *plt.xlim(), alpha=1, color='r')
@@ -436,12 +447,14 @@ class RtInferenceEngine:
             plt.xticks(rotation=30)
             plt.grid(True)
             plt.xlim(df_all.index.min() - timedelta(days=2), df_all.index.max() + timedelta(days=2))
-            plt.ylim(0, 5)
+            plt.ylim(-1, 5)
             plt.ylabel('$R_t$', fontsize=16)
             plt.legend()
             plt.title(self.display_name, fontsize=16)
 
             output_path = get_run_artifact_path(self.fips, RunArtifact.RT_INFERENCE_REPORT)
+            print('this is the path!!!!!!!')
+            print(output_path)
             plt.savefig(output_path, bbox_inches='tight')
             #plt.close()
 
@@ -499,7 +512,11 @@ def run_state(state, states_only=False):
     states_only: bool
         If True only run the state level.
     """
+
+    print('we are running the state')
+
     state_obj = us.states.lookup(state)
+    print(state_obj.fips)
     df = RtInferenceEngine.run_for_fips(state_obj.fips)
     output_path = get_run_artifact_path(state_obj.fips, RunArtifact.RT_INFERENCE_RESULT)
     df.to_json(output_path)

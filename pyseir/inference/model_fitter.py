@@ -1,5 +1,6 @@
 import logging
 import iminuit
+import pdb
 # TODO use JAX for numpy XLA acceleration
 #from jax.config import config
 #config.update("jax_enable_x64", True) # enable float64 precision
@@ -112,7 +113,11 @@ class ModelFitter:
             self.agg_level = AggregationLevel.STATE
             self.state_obj = us.states.lookup(self.fips)
             self.state = self.state_obj.name
-            self.geo_metadata = load_data.load_county_metadata_by_state(self.state).loc[self.state].to_dict()
+            #This is where things fail Natasha
+            print('about to get metadata')
+            pdb.set_trace()
+            #self.geo_metadata = load_data.load_county_metadata_by_state(self.state).loc[self.state].to_dict()
+            print('got metadata')
 
             self.times, self.observed_new_cases, self.observed_new_deaths = \
                 load_data.load_new_case_data_by_state(self.state, self.ref_date)
@@ -316,6 +321,7 @@ class ModelFitter:
 
         # Load up some number of initial exposed so the initial flow into infected is stable.
         self.SEIR_kwargs['E_initial'] = self.steady_state_exposed_to_infected_ratio * 10 ** log10_I_initial
+        print('we are starting model here~~~~~~~~~~~')
 
         model = SEIRModel(
             R0=R0,
@@ -653,6 +659,7 @@ class ModelFitter:
         """
         # Assert that there are some cases for counties
         if len(fips) == 5:
+            print('assumed to be county')
             _, observed_new_cases, _ = load_data.load_new_case_data_by_fips(
                 fips, t0=datetime.today())
             if observed_new_cases.sum() < 1:
@@ -662,9 +669,12 @@ class ModelFitter:
             retries_left = n_retries
             model_is_empty = True
             while retries_left > 0 and model_is_empty:
+                print('about to setup model fitter')
                 model_fitter = cls(fips)
                 try:
+                    print('trying to fit model')
                     model_fitter.fit()
+                    print('model fit')
                     if model_fitter.mle_model and os.environ.get('PYSEIR_PLOT_RESULTS') == 'True':
                         model_fitter.plot_fitting_results()
                 except RuntimeError as e:
@@ -693,8 +703,10 @@ def run_state(state, states_only=False):
     """
     state_obj = us.states.lookup(state)
     logging.info(f'Running MLE fitter for state {state_obj.name}')
-
+    print('running model fitter')
+    #pdb.set_trace()
     model_fitter = ModelFitter.run_for_fips(state_obj.fips)
+    print('done')
 
     df_whitelist = load_data.load_whitelist()
     df_whitelist = df_whitelist[df_whitelist['inference_ok'] == True]

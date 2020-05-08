@@ -82,6 +82,7 @@ def _infer_rt(state=None, states_only=False):
 def _run_mle_fits(state=None, states_only=False):
     _cache_global_datasets()
     if state:
+        print('this is a state')
         model_fitter.run_state(state, states_only=states_only)
     else:
         for state_name in ALL_STATES:
@@ -142,14 +143,13 @@ def _run_all(
     run_mode=DEFAULT_RUN_MODE,
     generate_reports=False,
     output_interval_days=1,
-    skip_download=False,
+    skip_download=True,
     states_only=False,
     output_dir=None,
     skip_whitelist=False,
 ):
 
     _cache_global_datasets()
-
     if not skip_download:
         cache_all_data()
 
@@ -162,8 +162,12 @@ def _run_all(
         # method is used to measure localized Reff.
         # if not states_only:
         #     _impute_start_dates(state)
+        print('getting inferred rt~~~~~~~~~~~~~~~~~~~~~~')
         _infer_rt(state, states_only=states_only)
+        print('done getting inferred rt~~~~~~~~~~~~~~~~~')
+        print('getting mle~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         _run_mle_fits(state, states_only=states_only)
+        print('got mle~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         _run_ensembles(
             state,
             ensemble_kwargs=dict(
