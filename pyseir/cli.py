@@ -142,14 +142,14 @@ def _run_all(
     run_mode=DEFAULT_RUN_MODE,
     generate_reports=False,
     output_interval_days=1,
-    skip_download=False,
+    skip_download=True,
     states_only=False,
     output_dir=None,
-    skip_whitelist=False,
+    skip_whitelist=True,
 ):
 
     _cache_global_datasets()
-
+    print('I am here')
     if not skip_download:
         cache_all_data()
 
