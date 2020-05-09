@@ -108,7 +108,7 @@ class RtInferenceEngine:
             t_list=np.linspace(0, 365, 366)
         ).get_average_seir_parameters()
 
-        # Serial period = Incubation + 0.5 * Infections
+        # Serial period = Incubation + 0.5 * Infections -- appears to be serial interval but != 6 as stated in modeling doc --Natasha
         self.serial_period = 1 / self.default_parameters['sigma'] + 0.5 * 1 /   self.default_parameters['delta']
 
         # If we only receive current hospitalizations, we need to account for
@@ -264,17 +264,26 @@ class RtInferenceEngine:
             return None, None, None
 
         # (1) Calculate Lambda (the Poisson likelihood given the data) based on
-        # the observed increase from t-1 cases to t cases.
+        # the observed increase from t-1 cases to t cases. #ask Eric about the logic here Natasha
         lam = timeseries[:-1].values * np.exp((self.r_list[:, None] - 1) / self.serial_period)
+        '''
+        print('time series')
+        print(timeseries)
+        print('values')
+        print(timeseries[:-1].values)
+        print('lamda')
         print(lam)
+        print('rlist')
         print(self.r_list)
-        exit()
+        '''
 
         # (2) Calculate each day's likelihood over R_t
         likelihoods = pd.DataFrame(
             data=sps.poisson.pmf(timeseries[1:].values, lam),
             index=self.r_list,
             columns=timeseries.index[1:])
+
+        #print(likelihoods)
 
         # (3) Create the Gaussian Matrix
         process_matrix = sps.norm(loc=self.r_list, scale=self.process_sigma).pdf(self.r_list[:, None])
@@ -316,6 +325,8 @@ class RtInferenceEngine:
             log_likelihood += np.log(denominator)
 
         self.log_likelihood = log_likelihood
+
+        print(posteriors)
 
         if plot:
             plt.figure(figsize=(12, 8))
@@ -360,16 +371,13 @@ class RtInferenceEngine:
 
         plt.xticks(rotation=30)
         plt.grid(True)
-        #plt.xlim(df_all.index.min() - timedelta(days=2), df_all.index.max() + timedelta(days=2))
-        #plt.ylim(0, 5)
         plt.ylabel('Raw Number of New Cases/Deaths', fontsize=16)
         plt.legend()
         plt.title(self.display_name, fontsize=16)
-        #output_path = get_run_artifact_path(self.fips, RunArtifact.RT_INFERENCE_REPORT)
         output_path = get_run_artifact_path(self.fips, RunArtifact.RAW_PLOT)
-        print(output_path)
         plt.savefig(output_path, bbox_inches='tight')
         plt.close('all')
+
         #Now work on inference
         df_all = None
         available_timeseries = []
@@ -404,7 +412,7 @@ class RtInferenceEngine:
             #append raw values for testing
             dates, times, posteriors = self.get_posteriors(timeseries_type)
             if posteriors is not None:
-                df[f'Rt_MAP__{timeseries_type.value}'] = posteriors.idxmax()
+                df[f'Rt_MAP__{timeseries_type.value}'] = posteriors.idxmax() #this is the most likely rt value after bayesian updating
                 for ci in self.confidence_intervals:
                     ci_low, ci_high = self.highest_density_interval(posteriors, ci=ci)
 
@@ -421,7 +429,7 @@ class RtInferenceEngine:
                 else:
                     df_all = df_all.merge(df, left_index=True, right_index=True, how='outer')
 
-                # Compute the indicator lag using the curvature alignment method.
+                # Compute the indicator lag using the curvature alignment method. #do we really think deaths and cases will be in time with each other?
                 if timeseries_type in (TimeseriesType.NEW_DEATHS, TimeseriesType.NEW_HOSPITALIZATIONS) \
                         and f'Rt_MAP__{TimeseriesType.NEW_CASES.value}' in df_all.columns:
                     # Go back upto 30 days or the max time series length we have if shorter.

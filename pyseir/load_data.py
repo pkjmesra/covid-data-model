@@ -319,6 +319,7 @@ def load_new_case_data_by_fips(fips, t0):
     """
     _county_case_data = load_county_case_data()
     county_case_data = _county_case_data[_county_case_data['fips'] == fips]
+
     times_new = (county_case_data['date'] - t0).dt.days.iloc[1:]
     observed_new_cases = county_case_data['cases'].values[1:] - county_case_data['cases'].values[:-1]
     observed_new_deaths = county_case_data['deaths'].values[1:] - county_case_data['deaths'].values[:-1]
@@ -499,6 +500,7 @@ def load_new_case_data_by_state(state, t0):
     """
     _state_case_data = load_state_case_data()
     state_case_data = _state_case_data[_state_case_data['state'] == us.states.lookup(state).abbr]
+    state_case_data.drop(state_case_data.tail(3).index,inplace=True)
     times_new = (state_case_data['date'] - t0).dt.days.iloc[1:]
     observed_new_cases = state_case_data['cases'].values[1:] - state_case_data['cases'].values[:-1]
     observed_new_deaths = state_case_data['deaths'].values[1:] - state_case_data['deaths'].values[:-1]
