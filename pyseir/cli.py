@@ -73,6 +73,7 @@ def _impute_start_dates(state=None, states_only=False):
 
 def _infer_rt(state=None, states_only=False):
     if state:
+        print('about to run_state in infer_rt')
         infer_rt_module.run_state(state=state, states_only=states_only)
     else:
         for state_name in ALL_STATES:
@@ -147,7 +148,7 @@ def _run_all(
     output_dir=None,
     skip_whitelist=True,
 ):
-
+    print('now here')
     _cache_global_datasets()
     print('I am here')
     if not skip_download:
@@ -163,25 +164,25 @@ def _run_all(
         # if not states_only:
         #     _impute_start_dates(state)
         _infer_rt(state, states_only=states_only)
-        _run_mle_fits(state, states_only=states_only)
-        _run_ensembles(
-            state,
-            ensemble_kwargs=dict(
-                run_mode=run_mode,
-                generate_report=generate_reports,
-                covid_timeseries=nyt_dataset,
-            ),
-            states_only=states_only,
-        )
+        #_run_mle_fits(state, states_only=states_only)
+        #_run_ensembles(
+        #    state,
+        #    ensemble_kwargs=dict(
+        #        run_mode=run_mode,
+        #        generate_report=generate_reports,
+        #        covid_timeseries=nyt_dataset,
+        #    ),
+        #    states_only=states_only,
+        #)
         if generate_reports:
             _generate_state_reports(state)
-        _map_outputs(
-            state,
-            output_interval_days,
-            states_only=states_only,
-            output_dir=output_dir,
-            run_mode=run_mode,
-        )
+        #_map_outputs(
+        #    state,
+        #    output_interval_days,
+        #    states_only=states_only,
+        #    output_dir=output_dir,
+        #    run_mode=run_mode,
+        #)
     else:
         if states_only:
             f = partial(

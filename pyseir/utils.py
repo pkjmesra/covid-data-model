@@ -27,6 +27,9 @@ class RunMode(Enum):
 
 
 class RunArtifact(Enum):
+    POSTERIORS = 'posteriors'
+    GAUSSIAN_SMOOTHING = 'gaussian_smooth'
+    RAW_PLOT = 'raw_plot'
     RT_INFERENCE_RESULT = 'rt_inference_result'
     RT_INFERENCE_REPORT = 'rt_inference_report'
 
@@ -78,6 +81,14 @@ def get_run_artifact_path(fips, artifact, output_dir=None):
             path = os.path.join(REPORTS_FOLDER(output_dir, state_obj.name), f'Rt_results__{state_obj.name}__{county}__{fips}.pdf')
         else:
             path = os.path.join(STATE_SUMMARY_FOLDER(output_dir), 'reports', f'Rt_results__{state_obj.name}__{fips}.pdf')
+    elif artifact is RunArtifact.POSTERIORS:
+        path = os.path.join(STATE_SUMMARY_FOLDER(output_dir), 'reports', f'{state_obj.name}_posteriors_smooth_')
+    elif artifact is RunArtifact.GAUSSIAN_SMOOTHING:
+        path = os.path.join(STATE_SUMMARY_FOLDER(output_dir), 'reports', f'{state_obj.name}_gaussian_smooth_')
+    elif artifact is RunArtifact.RAW_PLOT:
+        #path = os.path.join(REPORTS_FOLDER(output_dir, state_obj.name), 'raw_plot.pdf') #fix this later somehow doesn't allow other json files to be written
+        path = os.path.join(STATE_SUMMARY_FOLDER(output_dir), 'reports', f'raw__{state_obj.name}__{fips}.pdf')
+        #path = output_dir
 
     elif artifact is RunArtifact.RT_INFERENCE_RESULT:
         if agg_level is AggregationLevel.COUNTY:
@@ -125,6 +136,8 @@ def get_run_artifact_path(fips, artifact, output_dir=None):
     elif artifact is RunArtifact.WHITELIST_RESULT:
         path = os.path.join(output_dir, 'api_whitelist.json')
 
+
+
     elif artifact is RunArtifact.BACKTEST_RESULT:
         if agg_level is AggregationLevel.COUNTY:
             path = os.path.join(REPORTS_FOLDER(output_dir, state_obj.name),
@@ -132,6 +145,7 @@ def get_run_artifact_path(fips, artifact, output_dir=None):
         else:
             path = os.path.join(STATE_SUMMARY_FOLDER(output_dir), 'reports',
                                 f'backtest_results__{state_obj.name}__{fips}.pdf')
+
 
     else:
         raise ValueError(f'No paths available for artifact {RunArtifact}')

@@ -1,4 +1,4 @@
-import math
+import math, pdb
 from datetime import datetime, timedelta
 import numpy as np
 import logging
@@ -154,7 +154,7 @@ class RtInferenceEngine:
         elif timeseries_type in (TimeseriesType.NEW_HOSPITALIZATIONS, TimeseriesType.CURRENT_HOSPITALIZATIONS):
             return self.hospital_dates, self.hospital_times, self.hospitalizations
 
-    def apply_gaussian_smoothing(self, timeseries_type, plot=False):
+    def apply_gaussian_smoothing(self, timeseries_type, plot=True):
         """
         Apply a rolling Gaussian window to smooth the data. This signature and
         returns match get_time_series, but will return a subset of the input
@@ -205,7 +205,11 @@ class RtInferenceEngine:
             plt.xticks(rotation=30)
             plt.xlim(min(dates[-len(original):]), max(dates) + timedelta(days=2))
             plt.legend()
-
+            print(timeseries_type.value)
+            output_path = str(get_run_artifact_path(self.fips, RunArtifact.GAUSSIAN_SMOOTHING)) + str(timeseries_type.value) + '.pdf'
+            
+            plt.savefig(output_path, bbox_inches='tight')
+            plt.close('all')
         return dates, times, smoothed
 
     def highest_density_interval(self, posteriors, ci):
@@ -234,7 +238,7 @@ class RtInferenceEngine:
         ci_high = self.r_list[high_idx_list]
         return ci_low, ci_high
 
-    def get_posteriors(self, timeseries_type, plot=False):
+    def get_posteriors(self, timeseries_type, plot=True):
         """
         Generate posteriors for R_t.
 
@@ -262,6 +266,9 @@ class RtInferenceEngine:
         # (1) Calculate Lambda (the Poisson likelihood given the data) based on
         # the observed increase from t-1 cases to t cases.
         lam = timeseries[:-1].values * np.exp((self.r_list[:, None] - 1) / self.serial_period)
+        print(lam)
+        print(self.r_list)
+        exit()
 
         # (2) Calculate each day's likelihood over R_t
         likelihoods = pd.DataFrame(
@@ -316,11 +323,18 @@ class RtInferenceEngine:
             plt.grid(alpha=0.4)
             plt.xlabel('$R_t$', fontsize=16)
             plt.title('Posteriors', fontsize=18)
+
+            output_path = str(get_run_artifact_path(self.fips, RunArtifact.POSTERIORS)) + str(self.state) + str(timeseries_type.value) + '.pdf'
+            print(output_path)
+            plt.savefig(output_path, bbox_inches='tight')
+            plt.close('all')
+
         start_idx = -len(posteriors.columns)
 
         return dates[start_idx:], times[start_idx:], posteriors
 
-    def infer_all(self, plot=False, shift_deaths=0):
+    def infer_all(self, plot=True, shift_deaths=0):
+        print('in infer all')
         """
         Infer R_t from all available data sources.
 
@@ -337,19 +351,44 @@ class RtInferenceEngine:
         inference_results: pd.DataFrame
             Columns containing MAP estimates and confidence intervals.
         """
+        #Check raw data first
+        new_case_dates, new_case_times, new_cases = self.get_timeseries(TimeseriesType.NEW_CASES.value)
+        new_death_dates, new_death_times, new_deaths = self.get_timeseries(TimeseriesType.NEW_DEATHS.value)
+
+        plt.plot(new_case_dates, new_cases, alpha = 1, markersize = 3, color = 'green', label = 'Raw New Cases', marker = '.')#, marker = 'd')
+        plt.plot(new_death_dates, new_deaths, alpha = 1, markersize = 3, color = 'blue', label = 'Raw New Deaths', marker = '.')#, marker = 'd')
+
+        plt.xticks(rotation=30)
+        plt.grid(True)
+        #plt.xlim(df_all.index.min() - timedelta(days=2), df_all.index.max() + timedelta(days=2))
+        #plt.ylim(0, 5)
+        plt.ylabel('Raw Number of New Cases/Deaths', fontsize=16)
+        plt.legend()
+        plt.title(self.display_name, fontsize=16)
+        #output_path = get_run_artifact_path(self.fips, RunArtifact.RT_INFERENCE_REPORT)
+        output_path = get_run_artifact_path(self.fips, RunArtifact.RAW_PLOT)
+        print(output_path)
+        plt.savefig(output_path, bbox_inches='tight')
+        plt.close('all')
+        #Now work on inference
         df_all = None
         available_timeseries = []
         IDX_OF_COUNTS = 2
+        #pdb.set_trace()
+
         cases = self.get_timeseries(TimeseriesType.NEW_CASES.value)[IDX_OF_COUNTS]
         deaths = self.get_timeseries(TimeseriesType.NEW_DEATHS.value)[IDX_OF_COUNTS]
+
         if self.hospitalization_data_type:
             hosps = self.get_timeseries(TimeseriesType.NEW_HOSPITALIZATIONS.value)[IDX_OF_COUNTS]
 
         if np.sum(cases) > self.min_cases:
             available_timeseries.append(TimeseriesType.NEW_CASES)
 
+
         if np.sum(deaths) > self.min_deaths:
             available_timeseries.append(TimeseriesType.NEW_DEATHS)
+
 
         if self.hospitalization_data_type is load_data.HospitalizationDataType.CURRENT_HOSPITALIZATIONS and len(hosps > 3):
             # We have converted this timeseries to new hospitalizations.
@@ -357,9 +396,12 @@ class RtInferenceEngine:
         elif self.hospitalization_data_type is load_data.HospitalizationDataType.CUMULATIVE_HOSPITALIZATIONS and len(hosps > 3):
             available_timeseries.append(TimeseriesType.NEW_HOSPITALIZATIONS)
 
-        for timeseries_type in available_timeseries:
 
+
+        
+        for timeseries_type in available_timeseries:
             df = pd.DataFrame()
+            #append raw values for testing
             dates, times, posteriors = self.get_posteriors(timeseries_type)
             if posteriors is not None:
                 df[f'Rt_MAP__{timeseries_type.value}'] = posteriors.idxmax()
@@ -428,6 +470,8 @@ class RtInferenceEngine:
                                  alpha=.4, color='darkseagreen')
                 plt.scatter(df_all.index, df_all['Rt_MAP__new_hospitalizations'],
                             alpha=1, s=25, color='darkseagreen', label='New Hospitalizations', marker='d')
+            if 'Rt_MAP_composite' in df_all:
+                plt.scatter(df_all.index, df_all['Rt_MAP_composite'], alpha = 1, s = 25, color = 'yellow', label = 'Inferred Rt Web', marker = 'd')
 
             plt.hlines([1.0], *plt.xlim(), alpha=1, color='g')
             plt.hlines([1.1], *plt.xlim(), alpha=1, color='gold')
@@ -489,6 +533,7 @@ class RtInferenceEngine:
 
 
 def run_state(state, states_only=False):
+    print('running state')
     """
     Run the R_t inference for each county in a state.
 
