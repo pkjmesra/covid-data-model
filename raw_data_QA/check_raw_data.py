@@ -26,7 +26,7 @@ def get_rmse(df1, df2, var):
   rmse = np.sqrt(mean_squared_error(df1[[var]], truncated_df2[[var]]))
   return round(rmse,2)
 
-def make_plot(var, df1, df2, df3, df1_name, df2_name, df3_name, args):
+def make_plot(var, df1, df2, df3, df1_name, df2_name, df3_name, args, state):
   rmse2 = get_rmse(df1, df3, var)
   rmse3 = get_rmse(df2, df3, var)
   plt.title(state)
@@ -38,7 +38,7 @@ def make_plot(var, df1, df2, df3, df1_name, df2_name, df3_name, args):
   plt.xticks(rotation=30)
   plt.legend(loc = 'upper left')
   plt.grid(True)
-  plt.savefig(var + 'compare.pdf', bbox_inches='tight')
+  plt.savefig(state + '_raw_' +  var + '_compare.pdf', bbox_inches='tight')
   plt.close('all')
 
 def get_current_day():
@@ -51,28 +51,28 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description = 'arg parser for process.py')
   #Output Dir------
   parser.add_argument('-output_dir', '--output_dir', type = str, dest = 'output_dir', default = 'output', help = 'output_dir')
-  parser.add_argument('-state', '--state', type = list, dest = 'state', default = ['Idaho'], help = 'name of state to process')
+  parser.add_argument('-state', '--state', type = list, dest = 'state', default = ['Idaho', 'Vermont'], help = 'name of state to process')
   parser.add_argument('-state_name', '--state_name', type = str, dest = 'state_name', default = 'state', help = 'name of state variable in input csv')
   parser.add_argument('-new_cases_name', '--new_cases_name', type = str, dest = 'new_cases_name', default = 'cases', help = 'name of new cases column in input csv')
   parser.add_argument('-new_deaths_name', '--new_deaths_name', type = str, dest = 'new_deaths_name', default = 'deaths', help = 'name of new deaths name in input csv')
   parser.add_argument('-date_name', '--date_name', type = str, dest = 'date_name', default = 'date', help = 'name of datesin input csv')
   parser.add_argument('-updated_date_name', '--updated_date_name', type = str, dest = 'updated_date_name', default = 'Date', help = 'name of date variable that is computed in this script, really just renaming')
-  state = 'Idaho'
   args = parser.parse_args()
 
-  df1 = get_state(pd.read_csv("data/us-counties-may7.csv", parse_dates=[args.date_name]), state, args)
-  df2 = get_state(pd.read_csv("data/us-counties-may10.csv", parse_dates=[args.date_name]), state, args)
-  df3 = get_state(pd.read_csv("data/us-counties-latest.csv", parse_dates=[args.date_name]), state, args)
-  df1_name = 'May 7'
-  df2_name = 'May 10'
-  df3_name = get_current_day()
+  for state in args.state:
+    df1 = get_state(pd.read_csv("data/us-counties-may7.csv", parse_dates=[args.date_name]), state, args)
+    df2 = get_state(pd.read_csv("data/us-counties-may10.csv", parse_dates=[args.date_name]), state, args)
+    df3 = get_state(pd.read_csv("data/us-counties-latest.csv", parse_dates=[args.date_name]), state, args)
+    df1_name = 'May 7'
+    df2_name = 'May 10'
+    df3_name = get_current_day()
 
-  #pd.set_option('display.max_rows', None)
+    #pd.set_option('display.max_rows', None)
 
-  df1_ag = aggregate_df(df1, args)
-  df2_ag = aggregate_df(df2, args)
-  df3_ag = aggregate_df(df3, args)
-  make_plot('new_cases', df1_ag, df2_ag, df3_ag, df1_name, df2_name, df3_name, args)
-  make_plot('new_deaths', df1_ag, df2_ag, df3_ag, df1_name, df2_name, df3_name, args)
+    df1_ag = aggregate_df(df1, args)
+    df2_ag = aggregate_df(df2, args)
+    df3_ag = aggregate_df(df3, args)
+    make_plot('new_cases', df1_ag, df2_ag, df3_ag, df1_name, df2_name, df3_name, args, state)
+    make_plot('new_deaths', df1_ag, df2_ag, df3_ag, df1_name, df2_name, df3_name, args, state)
 
 
